@@ -1,19 +1,32 @@
+var webSocket = new WebSocket("ws://localhost:8080/ws");
+
 function connectToServer() {
-    var webSocket = new WebSocket("ws://localhost:8080/ws");
-    console.log("Attemting to connect to the server...")
-    webSocket.onopen = function (event) {
-        console.log("Connected!")
+    console.log("Attempting Connection...");
+
+    webSocket.onopen = () => {
+        console.log("Successfully Connected");
         connected = true
     };
-    webSocket.onmessage = function (event) {
-        console.log(event.data)
-    };
-    webSocket.onclose = (event) => {
-        console.log("closed")
-    }
-}
 
-var connected = true
+    webSocket.onmessage = msg => {
+        console.log(msg);
+    };
+
+    webSocket.onclose = event => {
+        console.log("Socket Closed Connection: ", event);
+    };
+
+    webSocket.onerror = error => {
+        console.log("Socket Error: ", error);
+    };
+};
+connectToServer();
+function sendMsg(msg) {
+    console.log("sending msg: ", msg);
+    webSocket.send(msg);
+};
+
+var connected = false
 var cnv;
 var snake;
 var scl = 20;
@@ -28,7 +41,7 @@ function setup() {
     gameField.paddingLeft = 20;
     gameField.paddingTop = 20;
     snake = new Snake(gameField, scl);
-    frameRate(8);
+    frameRate(1);
     pickLocation();
 }
 
@@ -39,25 +52,27 @@ function draw() {
         return
     }
     snake.update();
-    // webSocket.send(snake.x + " " + snake.y)
-    if (!snake.hits([snake])) {
-        background("#a38d72");
-        drawGameField();
-        snake.draw();
+    sendMsg(snake.headX + " " + snake.headY);
 
-        if (snake.eat(food)) {
-            pickLocation();
-        }
-
-        drawFood();
-        drawScore();
-
-        //Adds gamefield to the canvas
-        image(gameField, gameField.paddingLeft, gameField.paddingTop);
-    } else {
+    if (snake.hits([snake])) {
         if (snake.length - 4 > bestscore) bestscore = snake.length - 4;
         setup();
+        return
     }
+
+    background("#a38d72");
+    drawGameField();
+    snake.draw();
+
+    if (snake.eat(food)) {
+        pickLocation();
+    }
+
+    drawFood();
+    drawScore();
+
+    //Adds gamefield to the canvas
+    image(gameField, gameField.paddingLeft, gameField.paddingTop);
 }
 
 function drawGameField() {
