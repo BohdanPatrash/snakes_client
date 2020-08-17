@@ -1,6 +1,5 @@
-var webSocket = new WebSocket("ws://localhost:8080/ws");
-
 function connectToServer() {
+    let webSocket = new WebSocket("ws://localhost:8080/ws");
     console.log("Attempting Connection...");
 
     webSocket.onopen = () => {
@@ -9,7 +8,11 @@ function connectToServer() {
     };
 
     webSocket.onmessage = msg => {
-        console.log(msg);
+        console.log(msg)
+        newState = JSON.parse(msg.data)
+        console.log(newState)
+        snake.update(newState.snake)
+        console.log(msg.data);
     };
 
     webSocket.onclose = event => {
@@ -19,16 +22,21 @@ function connectToServer() {
     webSocket.onerror = error => {
         console.log("Socket Error: ", error);
     };
-};
-connectToServer();
-function sendMsg(msg) {
-    console.log("sending msg: ", msg);
-    webSocket.send(msg);
+
+    return webSocket;
 };
 
+function sendMsg(msg) {
+    console.log("sending msg: ", msg);
+    webSocket.send(JSON.stringify(msg));
+};
+
+var webSocket = connectToServer();
 var connected = false
+
 var cnv;
 var snake;
+var enemySnakes;
 var scl = 20;
 var food;
 var gameField;
@@ -41,7 +49,7 @@ function setup() {
     gameField.paddingLeft = 20;
     gameField.paddingTop = 20;
     snake = new Snake(gameField, scl);
-    frameRate(1);
+    frameRate(16);
     pickLocation();
 }
 
@@ -51,22 +59,26 @@ function draw() {
         text("connecting...", 450, 40);
         return
     }
-    snake.update();
-    sendMsg(snake.headX + " " + snake.headY);
-
-    if (snake.hits([snake])) {
-        if (snake.length - 4 > bestscore) bestscore = snake.length - 4;
-        setup();
+    if (snake.isDead) {
+        text("died", 450, 40);
         return
     }
+    snake.countVelocity();
+    snake.sendDirection(webSocket)
+
+    // if (snake.hits([snake])) {
+    //     if (snake.length - 4 > bestscore) bestscore = snake.length - 4;
+    //     setup();
+    //     return
+    // }
 
     background("#a38d72");
     drawGameField();
     snake.draw();
 
-    if (snake.eat(food)) {
-        pickLocation();
-    }
+    // if (snake.eat(food)) {
+    //     pickLocation();
+    // }
 
     drawFood();
     drawScore();

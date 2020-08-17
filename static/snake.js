@@ -1,4 +1,5 @@
 function Snake(gameField, scale) {
+    this.isDead = false
     this.length = 4;
     this.headY = 0;
     this.headX = this.length * scale;
@@ -7,13 +8,17 @@ function Snake(gameField, scale) {
     this.tail = [];
     this.bufferDirection = { x: 2, y: 2, nextX: 2, nextY: 2 };
     for (var i = 0; i < this.length - 1; i++) {
-        this.tail[i] = createVector((this.length - 1 - i) * scale, 0);
+        this.tail[i] = { x: (this.length - 1 - i) * scale, y: 0 };
     }
 
-    this.update = function () {
-        this._moveTail();
-        this._countVelocity();
-        this._moveHead();
+    this.update = function (newState) {
+        this.headX = newState.headX
+        this.headY = newState.headY
+        this.speedX = newState.speedX
+        this.speedY = newState.speedY
+        this.isDead = newState.isDead
+        this.tail = newState.tail
+        this.length = newState.length
     };
 
     this._moveTail = function () {
@@ -30,7 +35,7 @@ function Snake(gameField, scale) {
 
     //Velocity is calculated with the buffer in mind(e.g. if you are moving up you can instantly click left and down to make a turn).
     // Number 2 is an indicator that the buffer direction is NOT in use, because numbers -1, 0, 1 are used for providing speed and its direction
-    this._countVelocity = function () {
+    this.countVelocity = function () {
         if (this.bufferDirection.x !== 2 &&
             this.bufferDirection.y !== 2 &&
             this.speedY !== this.bufferDirection.y &&
@@ -52,6 +57,14 @@ function Snake(gameField, scale) {
         }
     }
 
+    this.sendDirection = (websocket) => {
+        message = {
+            speedX: this.speedX,
+            speedY: this.speedY
+        };
+        webSocket.send(JSON.stringify(message));
+    }
+
     this.draw = function () {
         gameField.fill("#911f0b");
         gameField.rect(this.headX, this.headY, scale, scale);
@@ -64,7 +77,7 @@ function Snake(gameField, scale) {
     this.eat = function (pos) {
         var d = dist(this.headX, this.headY, pos.x, pos.y);
         if (d < 1) {
-            this.tail.push(createVector(this.tail[this.tail.length - 1].x, this.tail[this.tail.length - 1].y));
+            this.tail.push({ x: this.tail[this.tail.length - 1].x, y: this.tail[this.tail.length - 1].y });
             this.length++;
             return true;
         } else {
